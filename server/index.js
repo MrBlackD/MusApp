@@ -4,6 +4,13 @@ const fs = require("fs");
 const app = express();
 
 /**
+ * middleware для установки всем ответам заголовка
+ */
+app.use((req,res,next)=>{
+    res.set("Access-Control-Allow-Origin","*");
+    next();
+})
+/**
  * Обработка корневого запроса
  */
 app.get("/",(req,res)=>{
