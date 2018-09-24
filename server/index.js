@@ -4,6 +4,14 @@ const fs = require("fs");
 const app = express();
 
 /**
+ * middleware для установки всем ответам заголовка
+ */
+app.use((req,res,next)=>{
+    res.set("Access-Control-Allow-Origin","*");
+    next();
+})
+
+/**
  * Обработка корневого запроса
  */
 app.get("/",(req,res)=>{
@@ -21,13 +29,20 @@ app.get("/tracks",(req,res)=>{
 /**
  * Получение трека по наименованию
  */
-app.get("/tracks/:name",(req,res)=>{
+app.get("/tracks/:name",(req,res,next)=>{
     const fileName = req.params.name;
     if(isMp3(fileName)){
-        res.sendFile(__dirname+"/static/mus/"+fileName,{},(err)=>{
+        var options = {
+            dotfiles: 'deny',
+            headers: {
+                'x-timestamp': Date.now(),
+                'x-sent': true
+            }
+          };
+        res.sendFile(__dirname+"/static/mus/"+fileName,options,(err)=>{
             if(err){
                 console.log("File "+fileName+" not found")
-                res.send("File "+fileName+" not found")
+                next(err)
             }else{
                 console.log("File sent:",fileName)
             }
@@ -36,6 +51,14 @@ app.get("/tracks/:name",(req,res)=>{
         res.status(400).send("Bad request");
     }
 })
+
+  /**
+ * Обработка ошибок
+ */
+app.use(function(err, req, res, next) {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+  });
 /**
  * Прослушивание сервером порта 3000
  */
