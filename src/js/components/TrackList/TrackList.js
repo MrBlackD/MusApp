@@ -18,6 +18,12 @@ export default class TrackList extends React.Component {
         this.setTrackRow = element => {
             this.trackRow.push(element);
         };
+
+        this.li = null;
+        this.setLi = element => {
+            this.li = element;
+        };
+
         this.getTrackDuration = ( i ) => {
             if (this.trackRow[ i ]) return this.trackRow[ i ].duration
         };
@@ -37,6 +43,7 @@ export default class TrackList extends React.Component {
             if(activeTrackIndex != null){
                 activeTrack.pause();
                 activeTrack.currentTime = 0;
+                this.li.style.backgroundImage = '';
             }
             currentTrack.play();
         }else{
@@ -53,14 +60,28 @@ export default class TrackList extends React.Component {
         this.setState({gotDuration: true});
     }
 
+    onTimeUpdate( ) {
+        const { activeTrackIndex } = this.state;
+        const activeTrack = this.trackRow[this.state.activeTrackIndex];
+        const trackDuration = this.getTrackDuration( activeTrackIndex );
+        const currentDuration = activeTrack.currentTime;
+        const gradientPercent = (currentDuration/trackDuration)*100;
+
+        if(this.li !== null){
+            this.li.style.backgroundImage = 'linear-gradient(to right, red 0%, red ' + gradientPercent + '%, yellow ' + gradientPercent + '%, yellow 100%)';
+        }
+
+    }
+
     render() {
-        const {tracks, activeTrack} = this.state;
+        const {tracks, activeTrackIndex} = this.state;
         return (
             <div className={"track-list"}>
                 <ul>
                     {tracks.map((track, index) => {
                         return <li key={track}
-                                   className={track === tracks[activeTrack] ? "active" : ""}
+                                   ref={(element)=>index === activeTrackIndex && this.setLi(element)}
+                                   className={track === tracks[activeTrackIndex] ? "active" : ""}
                                    onClick={() => this.selectTrack(index)}>
                             <div className={"trackListRow"}>
                                 <div className={"trackName"}>
@@ -74,6 +95,7 @@ export default class TrackList extends React.Component {
                                 ref={this.setTrackRow}
                                 preload={'auto'}
                                 onCanPlay={ this.onCanPlay.bind( this )}
+                                onTimeUpdate={ this.onTimeUpdate.bind( this ) }
                                 src={'http://localhost:3000/tracks/' + track}>
                             </audio>
                         </li>
