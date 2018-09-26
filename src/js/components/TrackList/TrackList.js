@@ -4,12 +4,13 @@ import {secondsToTime} from "../../utils/utils";
 import Player from "../Player/Player";
 import PropTypes from "prop-types"
 
+
 export default class TrackList extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             tracks: [],
-            activeTrack: null,
+            activeTrackIndex: null,
             gotDuration: false
         };
 
@@ -28,9 +29,24 @@ export default class TrackList extends React.Component {
     }
 
     selectTrack(index) {
-        if(this.state.activeTrack!=null) this.trackRow[this.state.activeTrack].pause();
-        this.trackRow[index].play();
-        this.setState({activeTrack: index})
+        const { activeTrackIndex } = this.state;
+        const activeTrack = this.trackRow[this.state.activeTrackIndex];
+        const currentTrack = this.trackRow[index];
+
+        if(index !== activeTrackIndex){
+            if(activeTrackIndex != null){
+                activeTrack.pause();
+                activeTrack.currentTime = 0;
+            }
+            currentTrack.play();
+        }else{
+            if(currentTrack.paused){
+                currentTrack.play();
+            }else{
+                currentTrack.pause();
+            }
+        }
+        this.setState({activeTrackIndex: index})
     }
 
     onCanPlay( ) {
@@ -46,8 +62,14 @@ export default class TrackList extends React.Component {
                         return <li key={track}
                                    className={track === tracks[activeTrack] ? "active" : ""}
                                    onClick={() => this.selectTrack(index)}>
-                            {track}
-                            {secondsToTime(this.getTrackDuration(index))}
+                            <div className={"trackListRow"}>
+                                <div className={"trackName"}>
+                                    {track}
+                                </div>
+                                <div className={"trackDuration"}>
+                                    {secondsToTime(this.getTrackDuration(index))}
+                                </div>
+                             </div>
                             <audio
                                 ref={this.setTrackRow}
                                 preload={'auto'}
