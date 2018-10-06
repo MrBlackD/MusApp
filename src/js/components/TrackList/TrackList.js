@@ -1,111 +1,132 @@
 import React from "react";
-import "./track-list.less"
-import {secondsToTime} from "../../utils/utils";
-import Player from "../Player/Player";
-import PropTypes from "prop-types"
-
+import "./track-list.less";
+import { secondsToTime } from "../../utils/utils";
 
 export default class TrackList extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            tracks: [],
-            activeTrackIndex: null,
-            gotDuration: false
-        };
+  constructor(props) {
+    super(props);
+    this.state = {
+      tracks: [],
+      playingTrackIndex: null
+    };
 
-        this.trackRow = [];
-        this.setTrackRow = element => {
-            this.trackRow.push(element);
-        };
+    this.trackListRows = [];
+    this.setTrackRow = element => {
+      this.trackListRows.push(element);
+    };
 
-        this.li = null;
-        this.setLi = element => {
-            this.li = element;
-        };
+    this.li = null;
+    this.setLi = element => {
+      this.li = element;
+    };
 
-        this.getTrackDuration = ( i ) => {
-            if (this.trackRow[ i ]) return this.trackRow[ i ].duration
-        };
+    this.getTrackDuration = i => {
+      if (this.trackListRows[i]) return this.trackListRows[i].duration;
+    };
+  }
 
+  componentDidMount() {
+    fetch("http://localhost:3000/tracks")
+      .then(res => res.json())
+      .then(res => this.setState({ tracks: res }));
+  }
+
+  selectTrack(index) {
+    const { playingTrackIndex } = this.state;
+    const playingTrack = this.trackListRows[this.state.playingTrackIndex];
+    const triggeredTrack = this.trackListRows[index];
+
+    if (index !== playingTrackIndex) {
+      if (playingTrackIndex != null) {
+        playingTrack.pause();
+        playingTrack.currentTime = 0;
+        this.li.style.backgroundImage = "";
+      }
+      triggeredTrack.play();
+    } else {
+      if (triggeredTrack.paused) {
+        triggeredTrack.play();
+      } else {
+        triggeredTrack.pause();
+      }
     }
+    this.setState({ playingTrackIndex: index });
+  }
 
-    componentDidMount() {
-        fetch("http://localhost:3000/tracks").then(res => res.json()).then(res => this.setState({tracks: res}))
+  onCanPlay() {
+    this.setState({ gotDuration: true });
+  }
+
+  onTimeUpdate() {
+    const { playingTrackIndex } = this.state;
+    const playingTrack = this.trackListRows[this.state.playingTrackIndex];
+    const trackDuration = this.getTrackDuration(playingTrackIndex);
+    const currentDuration = playingTrack.currentTime;
+    const gradientPercent = (currentDuration / trackDuration) * 100;
+
+    if (this.li !== null) {
+      this.li.style.backgroundImage =
+        "linear-gradient(to right, red 0%, red " +
+        gradientPercent +
+        "%, yellow " +
+        gradientPercent +
+        "%, yellow 100%)";
     }
+  }
 
-    selectTrack(index) {
-        const { activeTrackIndex } = this.state;
-        const activeTrack = this.trackRow[this.state.activeTrackIndex];
-        const currentTrack = this.trackRow[index];
+  setCurrentDuration(e, index) {
+    //TODO проверить различия в разных браузерах
+    if (this.li !== null) {
+      const x = e.clientX;
+      const elementWidth = this.li.clientWidth;
+      const targetRewindPercent = x / elementWidth;
 
-        if(index !== activeTrackIndex){
-            if(activeTrackIndex != null){
-                activeTrack.pause();
-                activeTrack.currentTime = 0;
-                this.li.style.backgroundImage = '';
-            }
-            currentTrack.play();
-        }else{
-            if(currentTrack.paused){
-                currentTrack.play();
-            }else{
-                currentTrack.pause();
-            }
-        }
-        this.setState({activeTrackIndex: index})
+      const trackDuration = this.getTrackDuration(index);
+      const newCurrentTime = trackDuration * targetRewindPercent;
+      this.trackListRows[index].currentTime = newCurrentTime;
     }
+  }
 
-    onCanPlay( ) {
-        this.setState({gotDuration: true});
-    }
-
-    onTimeUpdate( ) {
-        const { activeTrackIndex } = this.state;
-        const activeTrack = this.trackRow[this.state.activeTrackIndex];
-        const trackDuration = this.getTrackDuration( activeTrackIndex );
-        const currentDuration = activeTrack.currentTime;
-        const gradientPercent = (currentDuration/trackDuration)*100;
-
-        if(this.li !== null){
-            this.li.style.backgroundImage = 'linear-gradient(to right, red 0%, red ' + gradientPercent + '%, yellow ' + gradientPercent + '%, yellow 100%)';
-        }
-
-    }
-
-    render() {
-        const {tracks, activeTrackIndex} = this.state;
-        return (
-            <div className={"track-list"}>
-                <ul>
-                    {tracks.map((track, index) => {
-                        return <li key={track}
-                                   ref={(element)=>index === activeTrackIndex && this.setLi(element)}
-                                   className={track === tracks[activeTrackIndex] ? "active" : ""}
-                                   onClick={() => this.selectTrack(index)}>
-                            <div className={"trackListRow"}>
-                                <div className={"trackName"}>
-                                    {track}
-                                </div>
-                                <div className={"trackDuration"}>
-                                    {secondsToTime(this.getTrackDuration(index))}
-                                </div>
-                             </div>
-                            <audio
-                                ref={this.setTrackRow}
-                                preload={'auto'}
-                                onCanPlay={ this.onCanPlay.bind( this )}
-                                onTimeUpdate={ this.onTimeUpdate.bind( this ) }
-                                src={'http://localhost:3000/tracks/' + track}>
-                            </audio>
-                        </li>
-                    })}
-                </ul>
-            </div>
-        )
-    }
+  render() {
+    const { tracks, playingTrackIndex } = this.state;
+    return (
+      <div className={"track-list"}>
+        <ul>
+          {tracks.map((track, index) => {
+            const audioElem = this.trackListRows[index];
+            return (
+              <li
+                key={track}
+                ref={element =>
+                  index === playingTrackIndex && this.setLi(element)
+                }
+                className={track === tracks[playingTrackIndex] ? "active" : ""}
+                onClick={e => this.setCurrentDuration.bind(this)(e, index)}
+              >
+                <div className={"trackListRow"}>
+                  <div
+                    className={"playPauseBtn"}
+                    onClick={() => this.selectTrack(index)}
+                  >
+                    {audioElem && audioElem.paused ? ">" : "||"}
+                  </div>
+                  <div className={"trackName"}>{track}</div>
+                  <div className={"trackDuration"}>
+                    {secondsToTime(this.getTrackDuration(index))}
+                  </div>
+                </div>
+                <audio
+                  ref={this.setTrackRow}
+                  preload={"auto"}
+                  onCanPlay={this.onCanPlay.bind(this)}
+                  onTimeUpdate={this.onTimeUpdate.bind(this)}
+                  src={"http://localhost:3000/tracks/" + track}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
 }
-
-Player.propTypes={
-    track:PropTypes.string
-};
