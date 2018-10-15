@@ -1,6 +1,9 @@
 const User = require("../models/user");
 module.exports = (req, res, next) => {
   const { username, password } = req.body;
+  console.log(
+    "Registrate user with username = " + username + " password = " + password
+  );
   User.findOne({ username })
     .then(user => {
       if (user) {
