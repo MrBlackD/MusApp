@@ -1,5 +1,6 @@
 import React from "react";
 import "./track-list.less";
+import Track from "../Track/Track";
 import { secondsToTime } from "../../utils/utils";
 
 export default class TrackList extends React.Component {
@@ -7,13 +8,11 @@ export default class TrackList extends React.Component {
     super(props);
     this.state = {
       tracks: [],
-      playingTrackIndex: null
+      playingTrackIndex: null,
+      currentTrackIndex: null
     };
-
+    this.audioElements = [];
     this.trackListRows = [];
-    this.setTrackRow = element => {
-      this.trackListRows.push(element);
-    };
 
     this.li = null;
     this.setLi = element => {
@@ -53,10 +52,6 @@ export default class TrackList extends React.Component {
     this.setState({ playingTrackIndex: index });
   }
 
-  onCanPlay() {
-    this.setState({ gotDuration: true });
-  }
-
   onTimeUpdate() {
     const { playingTrackIndex } = this.state;
     const playingTrack = this.trackListRows[this.state.playingTrackIndex];
@@ -87,40 +82,33 @@ export default class TrackList extends React.Component {
     }
   }
 
+  selectTrack(index) {
+    const { currentTrack } = this;
+    const { currentTrackIndex } = this.state;
+    if (currentTrack) {
+      currentTrack.pause();
+    }
+    if (currentTrackIndex == index) {
+      this.setState({ currentTrackIndex: null });
+      return;
+    }
+    this.currentTrack = this.audioElements[index];
+    this.currentTrack.play();
+    this.setState({ currentTrackIndex: index });
+  }
   render() {
-    const { tracks, playingTrackIndex } = this.state;
+    const { tracks, currentTrackIndex } = this.state;
     return (
       <div className={"track-list"}>
         <ul>
           {tracks.map((track, index) => {
-            const audioElem = this.trackListRows[index];
             return (
-              <li
-                key={track}
-                ref={element =>
-                  index === playingTrackIndex && this.setLi(element)
-                }
-                className={track === tracks[playingTrackIndex] ? "active" : ""}
-                onClick={e => this.setCurrentDuration.bind(this)(e, index)}
-              >
-                <div className={"trackListRow"}>
-                  <div
-                    className={"playPauseBtn"}
-                    onClick={() => this.selectTrack(index)}
-                  >
-                    {audioElem && audioElem.paused ? ">" : "||"}
-                  </div>
-                  <div className={"trackName"}>{track}</div>
-                  <div className={"trackDuration"}>
-                    {secondsToTime(this.getTrackDuration(index))}
-                  </div>
-                </div>
-                <audio
-                  ref={this.setTrackRow}
-                  preload={"auto"}
-                  onCanPlay={this.onCanPlay.bind(this)}
-                  onTimeUpdate={this.onTimeUpdate.bind(this)}
-                  src={"http://localhost:3000/tracks/" + track}
+              <li key={track}>
+                <Track
+                  trackName={track}
+                  getAudioElement={el => this.audioElements.push(el)}
+                  selectTrack={() => this.selectTrack.bind(this)(index)}
+                  active={currentTrackIndex == index}
                 />
               </li>
             );
